@@ -40,6 +40,7 @@ PROTECTED_MERCHANTS = (
     "daraz",
     "careem",
     "steamgames.com",
+    "www.cibc.com",
 )
 
 _MONETARY_AMOUNT_RE = re.compile(
@@ -49,7 +50,6 @@ _DATE_RE = re.compile(
     r"\b(?:\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}|\d{1,2}[ \t\-][A-Za-z]{3,9}[ \t\-]\d{2,4})\b"
 )
 
-# Direct contextual regexes using [ \t] (never matching across newlines) and requiring digits for numeric IDs
 _DIRECT_CONTEXT_PATTERNS: list[tuple[str, re.Pattern[str], float]] = [
     (
         "SWIFT_BIC",
@@ -62,7 +62,7 @@ _DIRECT_CONTEXT_PATTERNS: list[tuple[str, re.Pattern[str], float]] = [
     (
         "ROUTING_NUMBER",
         re.compile(
-            r"\b(?:Routing(?:[ \t]+Number|[ \t]+No\.?)?|ABA|Sort Code|Transit(?:[ \t]+No\.?)?|IFSC)[ \t]*[:#\-][ \t]*(\d{2}-\d{2}-\d{2}|\d{5}-\d{3}|\d{9}|[A-Z]{4}0[A-Z0-9]{6})\b",
+            r"\b(?:Routing(?:[ \t]+Number|[ \t]+No\.?)?|ABA|Sort Code|Branch[ \t]+transit[ \t]+number|Transit(?:[ \t]+No\.?)?|IFSC)[ \t]*[:#\-]?[ \t\r\n]*(\d{2}-\d{2}-\d{2}|\d{5}-\d{3}|\d{9}|[A-Z]{4}0[A-Z0-9]{6}|[X*]{4,10})\b",
             re.IGNORECASE,
         ),
         0.99,
@@ -70,7 +70,7 @@ _DIRECT_CONTEXT_PATTERNS: list[tuple[str, re.Pattern[str], float]] = [
     (
         "ACCOUNT_ID",
         re.compile(
-            r"\b(?:Account(?:[ \t]+Number|[ \t]+No\.?|[ \t]+ID|[ \t]*#)?|Acct(?:[ \t]+No\.?|[ \t]*#)?|A/C(?:[ \t]+No\.?|[ \t]*#)?)[ \t]*[:#\-][ \t]*(?=[A-Z0-9\-]{6,22}\b)(?=[A-Z0-9\-]*\d)([A-Z0-9][A-Z0-9\-]{5,21})\b",
+            r"\b(?:Account(?:[ \t]+Number|[ \t]+No\.?|[ \t]+ID|[ \t]*#)|Acct(?:[ \t]+No\.?|[ \t]*#)?|A/C(?:[ \t]+No\.?|[ \t]*#)?)[ \t]*[:#\-]?[ \t\r\n]*([X*]{4,16}|(?=[A-Z0-9\-]{6,22}\b)(?=[A-Z0-9\-]*\d)[A-Z0-9][A-Z0-9\-]{5,21})\b",
             re.IGNORECASE,
         ),
         0.98,
@@ -141,17 +141,15 @@ def _is_protected_span(text: str, start: int, end: int, entity_type: str) -> boo
     snippet = text[start:end].strip()
     snippet_lower = snippet.lower()
 
-    # 1. Never redact across newlines
     if "\n" in snippet or "\r" in snippet:
         return True
 
-    # 2. Never redact protected merchant domains or names
     for merchant in PROTECTED_MERCHANTS:
         if snippet_lower == merchant or merchant in snippet_lower:
             if entity_type not in {"IBAN_CODE", "CARD_NUMBER", "NATIONAL_ID"}:
                 return True
 
-    # 3. Account IDs, Reference IDs, Card Numbers, National IDs, and Routing Numbers MUST contain at least one digit
+    # Allow masked placeholders like XXXXXXXX for ACCOUNT_ID / ROUTING_NUMBER, otherwise require a digit
     if entity_type in {
         "ACCOUNT_ID",
         "REFERENCE_ID",
@@ -160,22 +158,20 @@ def _is_protected_span(text: str, start: int, end: int, entity_type: str) -> boo
         "ROUTING_NUMBER",
         "IBAN_CODE",
     }:
-        if not any(ch.isdigit() for ch in snippet):
+        is_masked_x = bool(re.fullmatch(r"[X*]{4,16}", snippet))
+        if not any(ch.isdigit() for ch in snippet) and not is_masked_x:
             return True
 
-    # 4. Never redact decimal monetary amounts
     if re.fullmatch(r"[+\-]?\d{1,3}(?:,\d{3})*\.\d{2}", snippet):
         return True
     for m in _MONETARY_AMOUNT_RE.finditer(text):
         if start >= m.start() and end <= m.end():
             return True
 
-    # 5. Never redact standard transaction dates
     for d in _DATE_RE.finditer(text):
         if start >= d.start() and end <= d.end():
             return True
 
-    # 6. If EMAIL_ADDRESS matched a UPI/Wallet handle, let PAYMENT_HANDLE take precedence
     if entity_type == "EMAIL_ADDRESS" and re.search(
         r"@(?:okaxis|okhdfcbank|oksbi|okicici|ybl|paytm|ibl|axl|apl|upi|nayapay|sadapay|easypaisa|jazzcash|raast|venmo|cashapp|zelle)\b",
         snippet_lower,
@@ -188,7 +184,6 @@ def _is_protected_span(text: str, start: int, end: int, entity_type: str) -> boo
 def _resolve_overlaps(
     results: list[RecognizerResult],
 ) -> list[RecognizerResult]:
-    """Resolves overlapping entity spans by preferring higher confidence and longer spans."""
     if not results:
         return []
 
@@ -238,7 +233,6 @@ def _resolve_overlaps(
 
 
 def detect_pii(text: str, score_threshold: float = 0.60) -> list[RecognizerResult]:
-    """Detects financial and personal PII entities while preserving names, merchants, dates, and amounts."""
     normalized = normalize_text(text)
     analyzer = get_analyzer_engine()
 
