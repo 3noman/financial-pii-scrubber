@@ -1,0 +1,33 @@
+Chronological Log of Core Development Prompts
+Project: Financial Data Privacy Scrubber & AI Budget Analyzer
+======================================================================
+
+[Prompt 1 — Architecture Planning, Privacy Risk Analysis & Project Setup]
+Act as a senior Python backend engineer, application security engineer, database architect, AI engineer, UI/UX designer and technical mentor. Help me design and build a complete, production-minded application called "Financial Data Privacy Scrubber & AI Budget Analyzer" feature by feature. Read the project requirements, summarize the architecture and data flow, identify the most important privacy risks, define the modular folder structure, and guide me through Phase 1 (Planning) and Phase 2 (Environment Setup with Python 3.12, virtual environment, PostgreSQL/Docker Compose, centralized Pydantic configuration, and privacy-safe logging filters).
+
+[Prompt 2 — Feature 1: File Security & Modular Document Extractors]
+Implement the modular document extraction architecture for PDF (pdfplumber), DOCX (python-docx), CSV (csv module with multi-encoding fallback), and TXT (pathlib) files, along with file security validation using actual binary file signatures (magic bytes), file size limits, path-traversal filename sanitization, and unit tests in tests/test_extractors.py.
+
+[Prompt 3 — Feature 2: Context-Aware PII Detection & Scrubbing Engine]
+Build the local PII detection and scrubbing engine using Microsoft Presidio Analyzer, Presidio Anonymizer, spaCy (en_core_web_lg), phonenumbers, and custom financial recognizers with Modulo-97 IBAN checksum validation, Luhn card number validation, CNIC/SSN/NINO national ID patterns, SWIFT/BIC, routing/sort/IFSC codes, UPI/wallet payment handles, and transaction reference IDs. Ensure account holder names, merchant names (Foodpanda, Netflix.com, TESCO STORES, Amazon, Uber, Spotify), dates, amounts, and balances are preserved.
+
+[Prompt 4 — Debugging Regex Lookbehind & False-Positive Preservation Rules]
+Diagnose and fix the variable-width lookbehind regex error in the PII detector and refine the TransactionReferenceRecognizer and BankAccountRecognizer patterns so single-line transaction descriptions ("Monthly Subscription", "Electronics") and labels ("Account Holder") are never falsely redacted as reference or account IDs.
+
+[Prompt 5 — Features 3 & 4: Independent Privacy Verification Gate & Combined Output Engine]
+Implement the post-scrubbing independent verification gate (app/services/pii/verifier.py) that re-scans scrubbed text for residual identifiers and blocks unsafe data before database storage or Groq transmission. Build the Combined Output Engine (app/services/processing.py) that processes all supported files in a directory, isolates per-file errors, formats output with "---- File: <filename> ----" headers, and validates responses with Pydantic schemas.
+
+[Prompt 6 — Features 5 & 6: Relational Database Schema, Migrations & Deterministic Analytics]
+Design the relational database schema using SQLAlchemy 2.0 ORM (statements, transactions, analyses, chat_messages) with UUID primary keys, Numeric(14, 2) monetary columns, foreign keys with ON DELETE CASCADE, and Alembic migrations. Implement the deterministic transaction parser and Python analytics service (app/services/analytics.py) to calculate exact spending totals, category breakdowns, merchant frequencies, recurring payments, and subscription expenses.
+
+[Prompt 7 — Features 7 & 8: Groq AI Budget Analyzer, Hallucination Reconciliation & Grounded Chat]
+Implement the Groq AI budget analysis service (app/services/groq_service.py) and grounded chat service (app/services/chat_service.py) with dedicated system prompts (app/prompts/analysis.txt and app/prompts/chat.txt). Enforce untrusted data XML framing to prevent prompt injection, validate LLM JSON output with Pydantic, and reconcile AI-reported financial totals against deterministic Python calculations so mismatched totals are automatically corrected.
+
+[Prompt 8 — Feature 9: FastAPI Backend, Security Middleware & Integration Tests]
+Build the modular FastAPI routers (/api/statements, /api/statements/{id}/analyze, /api/chat) with immediate temporary raw file deletion in finally blocks, sliding-window rate limiting, restricted CORS, and HTTP security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy). Verify the end-to-end API workflow with FastAPI TestClient in tests/test_api.py.
+
+[Prompt 9 — Feature 10: Fintech Dashboard Frontend & Documentation]
+Build the responsive fintech dashboard frontend using plain HTML5, CSS3, and Vanilla JavaScript covering all 10 required views (upload dropzone, processing status, scrubbed preview, verification gate status, filterable transactions table, spending analysis, budgeting insights, grounded AI chat, and statement deletion). Prepare README.md and the one-page technical NOTES.md.
+
+[Prompt 10 — Real-World PDF Statement Parsing Enhancement]
+Diagnose why an unseen multi-column bank statement PDF (CIBC Bank-Statement-Example.pdf) extracted 0 transactions, and upgrade the transaction parser and PII detector to support short month-day dates ("Dec 30") combined with header years, multi-row same-date continuation lines, multi-line masked account headers, and automatic Debit/Credit inference from running balance changes.
