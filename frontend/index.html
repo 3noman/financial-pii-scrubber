@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Data Privacy Scrubber & AI Budget Analyzer</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-badge">PRO</div>
+        <h1>Privacy Scrubber & AI Budget Analyzer</h1>
+      </div>
+      <div class="header-status">
+        <span class="status-indicator live"></span>
+        <span>Local Privacy Pipeline Active</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Notice Banner -->
+    <section class="banner-privacy">
+      <div class="banner-icon">&#128274;</div>
+      <div class="banner-text">
+        <strong>100% Local Privacy Guarantee:</strong> Raw statement files and personal financial identifiers (IBANs, card numbers, national IDs, account numbers) are detected, scrubbed, and verified strictly on your local machine. Only verified scrubbed financial summaries are sent to Groq AI.
+      </div>
+    </section>
+
+    <!-- Upload & Ingestion Section -->
+    <section class="card upload-section">
+      <div class="card-header">
+        <div>
+          <h2>1. Ingest Financial Statements</h2>
+          <p class="subtitle">Upload PDF, DOCX, CSV, or TXT bank statements, or process the server's local <code>data/</code> folder.</p>
+        </div>
+        <button id="btn-process-folder" class="btn btn-secondary">
+          <span>&#128194;</span> Process Server <code>data/</code> Folder
+        </button>
+      </div>
+
+      <div class="upload-dropzone" id="dropzone">
+        <input type="file" id="file-input" multiple accept=".pdf,.docx,.csv,.txt" hidden>
+        <div class="dropzone-content">
+          <div class="upload-icon">&#8682;</div>
+          <p class="dropzone-title">Drag & drop financial statements here, or <button type="button" class="btn-link" id="btn-browse">browse files</button></p>
+          <p class="dropzone-hint">Supports multi-statement upload: PDF (native & tables), DOCX, CSV (with auto-encoding), TXT. Up to 10 MB per file.</p>
+        </div>
+      </div>
+
+      <div id="selected-files-list" class="selected-files-list hidden"></div>
+
+      <div class="upload-actions hidden" id="upload-actions-bar">
+        <button id="btn-upload" class="btn btn-primary">
+          <span class="btn-text">Scrub & Ingest Selected Files</span>
+          <span class="spinner hidden"></span>
+        </button>
+        <button id="btn-clear-selection" class="btn btn-ghost">Clear Selection</button>
+      </div>
+
+      <!-- Batch Processing Results -->
+      <div id="batch-results-panel" class="batch-results-panel hidden">
+        <div class="batch-summary-header">
+          <h3 id="batch-summary-title">Batch Ingestion Report</h3>
+          <span id="batch-verification-pill" class="pill pill-success">Verified Safe</span>
+        </div>
+        <div id="batch-files-grid" class="batch-files-grid"></div>
+      </div>
+    </section>
+
+    <!-- Statement Selection & Workspace -->
+    <section class="card workspace-section">
+      <div class="card-header">
+        <div>
+          <h2>2. Statement Workspace</h2>
+          <p class="subtitle">Select a verified statement record from the database to inspect, analyze, or query.</p>
+        </div>
+        <div class="workspace-controls">
+          <label for="statement-selector" class="sr-only">Select Statement</label>
+          <select id="statement-selector" class="select-dropdown">
+            <option value="">-- No statements loaded --</option>
+          </select>
+          <button id="btn-refresh-list" class="btn btn-icon" title="Refresh List">&#8635;</button>
+          <button id="btn-delete-statement" class="btn btn-danger-outline" title="Delete Statement" disabled>
+            <span>&#128465;</span> Delete Statement
+          </button>
+        </div>
+      </div>
+
+      <!-- Privacy & Verification Status Strip -->
+      <div id="privacy-status-strip" class="privacy-status-strip hidden">
+        <div class="privacy-metric">
+          <span class="metric-label">Verification Gate</span>
+          <span id="status-gate-pill" class="pill pill-success">PASSED</span>
+        </div>
+        <div class="privacy-metric">
+          <span class="metric-label">Total Redactions</span>
+          <span id="status-redaction-count" class="metric-val">0</span>
+        </div>
+        <div class="privacy-metric">
+          <span class="metric-label">AI Safety Status</span>
+          <span id="status-ai-safe" class="metric-val text-success">Safe for Groq</span>
+        </div>
+        <div class="privacy-badges" id="status-badges-container"></div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="tab-overview">Overview & Transactions</button>
+        <button class="tab-btn" data-tab="tab-scrubbed">Scrubbed Preview</button>
+        <button class="tab-btn" data-tab="tab-analysis">AI Budget Insights</button>
+        <button class="tab-btn" data-tab="tab-chat">AI Assistant Chat</button>
+      </nav>
+
+      <!-- TAB 1: Overview & Transactions -->
+      <div id="tab-overview" class="tab-content active">
+        <!-- KPI Summary Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Total Spending</span>
+            <span id="kpi-spending" class="kpi-value text-danger">PKR 0.00</span>
+            <span id="kpi-spending-sub" class="kpi-sub">0 debit transactions</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Total Identified Income</span>
+            <span id="kpi-income" class="kpi-value text-success">PKR 0.00</span>
+            <span id="kpi-income-sub" class="kpi-sub">0 credit deposits</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Net Cash Flow</span>
+            <span id="kpi-net" class="kpi-value">PKR 0.00</span>
+            <span class="kpi-sub">Deterministic Python calculation</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Recurring Subscriptions</span>
+            <span id="kpi-subscriptions" class="kpi-value text-accent">PKR 0.00</span>
+            <span id="kpi-subscriptions-sub" class="kpi-sub">0 active plans</span>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="table-toolbar">
+          <div class="search-box">
+            <input type="text" id="tx-search-input" placeholder="Search merchant, description, or category..." class="input-text">
+          </div>
+          <div class="filter-controls">
+            <select id="tx-type-filter" class="select-sm">
+              <option value="all">All Types</option>
+              <option value="Debit">Debit Only</option>
+              <option value="Credit">Credit Only</option>
+            </select>
+            <select id="tx-category-filter" class="select-sm">
+              <option value="all">All Categories</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="table-wrapper">
+          <table class="data-table" id="transactions-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Merchant</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Type</th>
+                <th class="text-right">Amount</th>
+                <th class="text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-table-body">
+              <tr>
+                <td colspan="7" class="empty-state">No statement selected. Please upload or select a statement above.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: Scrubbed Document Preview -->
+      <div id="tab-scrubbed" class="tab-content">
+        <div class="preview-toolbar">
+          <div class="preview-info">
+            <strong>Verified Scrubbed Document Text</strong>
+            <span class="hint-text">(Notice: Names and merchants like Foodpanda or Netflix are preserved; identifiers are replaced with &lt;TAGS&gt;)</span>
+          </div>
+          <div class="preview-actions">
+            <button id="btn-copy-scrubbed" class="btn btn-secondary-sm">Copy Text</button>
+            <button id="btn-download-scrubbed" class="btn btn-secondary-sm">Download .txt</button>
+          </div>
+        </div>
+        <pre id="scrubbed-pre-content" class="code-preview">Select a statement to preview scrubbed text.</pre>
+      </div>
+
+      <!-- TAB 3: AI Budget Insights -->
+      <div id="tab-analysis" class="tab-content">
+        <div class="analysis-action-strip">
+          <div class="analysis-intro">
+            <strong>Groq AI Budget & Expense Intelligence</strong>
+            <p class="subtitle">Combines deterministic Python calculations with LLM reasoning. Verified numbers override any hallucination.</p>
+          </div>
+          <button id="btn-run-analysis" class="btn btn-primary" disabled>
+            <span class="btn-text">Generate AI Insights</span>
+            <span class="spinner hidden"></span>
+          </button>
+        </div>
+
+        <div id="analysis-empty-state" class="empty-placeholder">
+          <div class="placeholder-icon">&#128202;</div>
+          <p>No insights generated yet for this statement. Click <strong>Generate AI Insights</strong> above to run analysis.</p>
+        </div>
+
+        <div id="analysis-results-view" class="analysis-results-view hidden">
+          <!-- Executive Summary Callout -->
+          <div class="insight-box highlight">
+            <h4>Executive Spending Summary</h4>
+            <p id="analysis-summary-text"></p>
+            <div id="analysis-model-tag" class="model-tag"></div>
+          </div>
+
+          <!-- Two-Column Breakdown -->
+          <div class="insight-columns">
+            <div class="insight-card">
+              <h4>Spending by Category (Deterministic)</h4>
+              <div id="analysis-category-bars" class="category-bars"></div>
+            </div>
+            <div class="insight-card">
+              <h4>Top Merchants & Frequency</h4>
+              <ul id="analysis-top-merchants-list" class="styled-list"></ul>
+            </div>
+          </div>
+
+          <!-- Observations & Suggestions -->
+          <div class="insight-columns">
+            <div class="insight-card">
+              <h4>Monthly Patterns & Observations</h4>
+              <ul id="analysis-patterns-list" class="bullet-list"></ul>
+            </div>
+            <div class="insight-card">
+              <h4>Practical Budgeting Suggestions</h4>
+              <ul id="analysis-suggestions-list" class="bullet-list checkmarks"></ul>
+            </div>
+          </div>
+
+          <!-- Audit & Reconciliation Footer -->
+          <div class="audit-footer">
+            <span id="audit-python-verified-badge" class="pill pill-success">&#10003; 100% Numbers Verified by Python</span>
+            <span id="audit-discrepancy-note" class="audit-note"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: Grounded AI Chat Assistant -->
+      <div id="tab-chat" class="tab-content">
+        <div class="chat-container">
+          <div class="chat-header">
+            <div>
+              <h3>Grounded Budgeting Q&A</h3>
+              <p class="subtitle">Ask follow-up questions about your expenses. The assistant is constrained strictly to your verified statement records.</p>
+            </div>
+            <span class="pill pill-neutral">Prompt-Injection Protected</span>
+          </div>
+
+          <!-- Quick Suggestion Buttons -->
+          <div class="quick-prompts">
+            <button class="btn-chip" data-prompt="How much did I spend on food?">How much on food?</button>
+            <button class="btn-chip" data-prompt="Which merchant did I pay most often?">Most frequent merchant?</button>
+            <button class="btn-chip" data-prompt="What was my largest transaction?">Largest transaction?</button>
+            <button class="btn-chip" data-prompt="How much did I spend on subscriptions?">Subscription total?</button>
+            <button class="btn-chip" data-prompt="Which category accounts for most of my expenses?">Top expense category?</button>
+          </div>
+
+          <!-- Message History -->
+          <div id="chat-messages-box" class="chat-messages-box">
+            <div class="chat-msg assistant">
+              <div class="msg-bubble">
+                Hello! I am your grounded personal budgeting assistant. Your statement data has been scrubbed of sensitive identifiers. Ask me anything about your spending, merchants, categories, or subscriptions!
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Bar -->
+          <form id="chat-input-form" class="chat-input-form">
+            <input type="text" id="chat-text-input" placeholder="Ask a question about your verified expenses..." class="input-text" autocomplete="off" required>
+            <button type="submit" id="btn-chat-send" class="btn btn-primary">
+              <span class="btn-text">Send</span>
+              <span class="spinner hidden"></span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Global Toast Alerts -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

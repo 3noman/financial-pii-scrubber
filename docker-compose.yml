@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: financial_scrubber_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-scrubber_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_local_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-financial_scrubber_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-scrubber_user} -d $${POSTGRES_DB:-financial_scrubber_db}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

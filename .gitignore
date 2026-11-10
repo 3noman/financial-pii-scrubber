@@ -1,0 +1,30 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Virtual Environment & Python Cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Raw Financial Statements & Temp Files (CRITICAL PRIVACY RULE)
+data/*
+!data/.gitkeep
+temp_uploads/
+*.pdf
+*.docx
+*.csv
+*.txt
+!requirements.txt
+!prompts.txt
+!app/prompts/*.txt
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
