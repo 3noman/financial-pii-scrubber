@@ -23,7 +23,7 @@ I designed four tables in SQLAlchemy (`statements`, `transactions`, `analyses`, 
 - **Cascade Deletes (`ON DELETE CASCADE`)**: Linking `transactions`, `analyses`, and `chat_messages` to `statements.id` with cascade delete means when a user deletes a statement, all related records and chat history are wiped in one transaction. Raw statement text is never saved in the database.
 
 ## 7 & 8. Groq Model Choice and System Prompt
-- **Model Choice**: I chose `llama-3.3-70b-versatile` on Groq (configured via `.env`). It follows JSON schema instructions much more reliably than smaller 8B models, has a large 128k context window for multi-file statements, and responds quickly on the free tier.
+- **Model Choice**: I chose `openai/gpt-oss-120b` on Groq (configured via `.env`). It follows JSON schema instructions much more reliably than smaller 8B models, has a large 128k context window for multi-file statements, and responds quickly on the free tier.
 - **Exact System Prompt (`app/prompts/analysis.txt`)**:
   ```text
   You are a trustworthy, privacy-first personal budgeting assistant.

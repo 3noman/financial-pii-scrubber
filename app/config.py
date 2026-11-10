@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # Groq AI Settings
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     GROQ_TIMEOUT_SECONDS: int = Field(default=30, ge=5, le=120)
 
     @property
